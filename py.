@@ -1,0 +1,95 @@
+TOKEN = "8463654311:AAHEZIt0V4AioSmWzOZE51sstBDe-fIEedk"
+CHAT_ID = "-5265717089"
+import network
+import urequests
+import time
+from machine import Pin
+import dht
+
+# -------- SETTINGS --------
+SSID = "TECNO POVA 6 Pro 5G"
+PASSWORD = "11111111"
+
+# -------- LED --------
+relay_pin = Pin(2, Pin.OUT)
+sensor = dht.DHT11(Pin(4))
+led = Pin(2, Pin.OUT)
+relay_status = 0
+relay_pin.value(0)
+# -------- WIFI --------
+wifi = network.WLAN(network.STA_IF)
+wifi.active(True)
+wifi.connect(SSID, PASSWORD)
+
+while not wifi.isconnected():
+    time.sleep(1)
+
+print("WiFi connected")
+
+# -------- TELEGRAM --------
+URL = "https://api.telegram.org/bot{}/getUpdates".format(TOKEN)
+URL_SEND = "https://api.telegram.org/bot{}/sendMessage".format(TOKEN)
+last_id = 0
+def send_message(message):
+    print(f"Sending: {message}")
+    urequests.post(URL_SEND, json={
+                        "chat_id": CHAT_ID,
+                        "text": message
+    })
+while True:
+    try:
+        r = urequests.get(URL + "?offset={}".format(last_id + 1))
+        messages = r.json()["result"]
+        r.close()
+        sensor.measure()
+        time.sleep(1)
+        temp = sensor.temperature()
+        print(f"Current Temp: {temp}")
+        if temp >= 30 and relay_status == 0:
+            time.sleep(5)
+            send_message("ALERT")
+        
+        for msg in messages:
+            print("Message recieve")
+            last_id = msg["update_id"]
+            text = msg["message"]["text"]
+            chat_id = msg["message"]["chat"]["id"]
+            print(f"Recieved: {text}")
+            if str(chat_id) == CHAT_ID:
+                
+                if text == "/on":
+                    led.value(1)
+                    relay_status = 1
+                    while True:
+                        sensor.measure()
+                        time.sleep(1)
+                        temp = sensor.temperature()
+                        print(temp)
+                        if temp < 30:
+                            led.value(0)
+                            relay_status = 0
+                            send_message("Auto-off")
+                            break
+                        else:
+                            continue
+                elif text == "/off":
+                    led.value(0)
+                    relay_status = 0
+                
+                elif text == "ping":
+                    urequests.post(URL_SEND, json={
+                        "chat_id": CHAT_ID,
+                        "text": "pong"
+                    })
+                elif text == "/th":
+             
+                    hum = sensor.humidity()
+                    message = "Temperature: {} °C\nHumidity: {} %".format(temp, hum)
+
+                    send_message(message)
+                    
+             
+    except:
+        pass
+
+    time.sleep(2)
