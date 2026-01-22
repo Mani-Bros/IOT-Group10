@@ -24,4 +24,4 @@ Task 6-Document(30 pts)
 • README.md with wiring diagram/photo, configuration steps (token, chat id),
 and usage instructions.
 • Include a block diagram or flowchart of your loop/state.
-https://youtube.com/shorts/5TNcPV0YCfY?si=SaSgWxwbx4AmAumm
+
